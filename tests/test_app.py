@@ -29,3 +29,23 @@ def test_echo(client):
 def test_echo_empty(client):
     res = client.post("/api/echo", json={"message": "  "})
     assert res.status_code == 400
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"json": ["hi"]},
+        {"json": "hi"},
+        {"json": 123},
+        {"json": {"message": None}},
+        {"json": {"message": 123}},
+        {"json": {"message": {}}},
+        {"json": {}},
+        {"data": "not json", "content_type": "text/plain"},
+        {},
+    ],
+)
+def test_echo_invalid_input(client, kwargs):
+    res = client.post("/api/echo", **kwargs)
+    assert res.status_code == 400
+    assert "error" in res.get_json()

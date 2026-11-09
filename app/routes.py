@@ -22,8 +22,8 @@ def health():
 @bp.post("/api/echo")
 def echo():
     """Placeholder endpoint: replace with a real AI call later."""
-    data = request.get_json(silent=True) or {}
-    message = str(data.get("message", "")).strip()
-    if not message:
+    data = request.get_json(silent=True)
+    message = data.get("message") if isinstance(data, dict) else None
+    if not isinstance(message, str) or not message.strip():
         return jsonify(error="กรุณาพิมพ์ข้อความ"), 400
-    return jsonify(reply=f"คุณพิมพ์ว่า: {message}")
+    return jsonify(reply=f"คุณพิมพ์ว่า: {message.strip()}")
