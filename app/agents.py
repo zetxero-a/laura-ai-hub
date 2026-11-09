@@ -117,4 +117,7 @@ def run_agent(name, request, context=""):
 
     if response.stop_reason == "refusal":
         return "(agent ปฏิเสธที่จะทำงานนี้)"
-    return ai_client.text_of(response)
+    output = ai_client.text_of(response)
+    if response.stop_reason in ("max_tokens", "pause_turn"):
+        output += "\n\n(⚠️ ผลงานนี้ไม่ครบ ถูกตัดก่อนเขียนจบ)"
+    return output
