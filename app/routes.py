@@ -53,7 +53,7 @@ def chat():
         {"role": "user", "content": message.strip()}
     ]
     try:
-        reply = ai.chat(messages)
+        result = ai.chat(messages)
     except ai.AIError as e:
         return jsonify(error=str(e)), e.status
-    return jsonify(reply=reply)
+    return jsonify(reply=result["reply"], handoffs=result["handoffs"])

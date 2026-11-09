@@ -61,7 +61,7 @@ button:disabled { opacity: .6; cursor: wait; }
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 420px;
+  max-height: 70vh;
   overflow-y: auto;
   margin-bottom: 12px;
 }
@@ -85,4 +85,19 @@ button:disabled { opacity: .6; cursor: wait; }
   color: var(--muted);
   font-size: .9rem;
   text-decoration: underline;
+}
+.handoff {
+  align-self: stretch;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  background: var(--card);
+}
+.handoff summary { padding: 8px 12px; cursor: pointer; font-weight: 600; }
+.handoff-body {
+  padding: 0 14px 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+  font-size: .95rem;
 }

@@ -4,3 +4,8 @@ __pycache__/
 .pytest_cache/
 .env
 instance/
+
+# Laura assistant output (permanent copy lives in Google Drive)
+ideas/
+research/
+secretary/

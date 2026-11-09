@@ -2,7 +2,7 @@
 {% block content %}
 <section class="hero">
   <h1>ยินดีต้อนรับสู่ {{ config.APP_NAME }}</h1>
-  <p>คุยกับ Laura ผู้ช่วย AI ที่ขับเคลื่อนด้วย Claude</p>
+  <p>คุยกับ Laura ผู้ประสานงาน AI ที่ส่งงานต่อให้ทีม: 💡 idea ช่วยเรียบเรียงไอเดีย · 🔎 research ช่วยหาข้อมูลพร้อมแหล่งอ้างอิง</p>
   <p class="status">สถานะเซิร์ฟเวอร์: <span id="status">กำลังตรวจสอบ…</span></p>
 </section>
 
@@ -43,6 +43,20 @@
     return div;
   }
 
+  function addHandoff(h) {
+    const details = document.createElement("details");
+    details.className = "handoff";
+    details.open = true;
+    const summary = document.createElement("summary");
+    summary.textContent = "ผลงานจาก " + h.label;
+    const body = document.createElement("div");
+    body.className = "handoff-body";
+    body.textContent = h.output;
+    details.append(summary, body);
+    log.appendChild(details);
+    log.scrollTop = log.scrollHeight;
+  }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const message = input.value.trim();
@@ -50,7 +64,7 @@
     addBubble("user", message);
     input.value = "";
     sendBtn.disabled = true;
-    const pending = addBubble("assistant pending", "กำลังคิด…");
+    const pending = addBubble("assistant pending", "Laura กำลังทำงาน… (ถ้าส่งให้ research อาจใช้เวลา 1–3 นาที)");
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -61,7 +75,11 @@
       if (res.ok) {
         pending.className = "bubble assistant";
         pending.textContent = data.reply;
-        history.push({ role: "user", content: message }, { role: "assistant", content: data.reply });
+        const handoffs = data.handoffs || [];
+        for (const h of handoffs) addHandoff(h);
+        // Keep agents' work in the history so Laura can build on it next turn.
+        const memory = [data.reply, ...handoffs.map(h => `[ผลงานจาก ${h.agent}]\n${h.output}`)].join("\n\n");
+        history.push({ role: "user", content: message }, { role: "assistant", content: memory });
       } else {
         pending.className = "bubble error";
         pending.textContent = data.error || "เกิดข้อผิดพลาด";

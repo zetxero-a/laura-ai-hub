@@ -2,6 +2,25 @@
 
 แอป Flask พร้อมแชตกับ Laura ผู้ช่วย AI ที่ใช้ Claude API
 
+Laura เป็นผู้ประสานงาน: อ่านข้อความแล้วตัดสินใจเองว่าจะตอบเลย หรือส่งงานให้ทีม
+
+| Agent | ทำอะไร |
+|---|---|
+| 💡 idea | เปลี่ยนความคิดยุ่งๆ ให้เป็นการ์ดไอเดีย พร้อมสมมติฐานและคำถามที่ต้องหาข้อมูล |
+| 🔎 research | ค้นเว็บแล้วเขียนรายงานพร้อมแหล่งอ้างอิง (ใช้เวลา 1–3 นาที) |
+
+```
+หน้าเว็บ ─▶ /api/chat ─▶ Laura (Claude + tools)
+                            ├─ ask_idea      ─▶ Claude (system prompt ของ idea)
+                            └─ ask_research  ─▶ Claude + web search
+```
+
+ผลงานของ agent แสดงใต้ข้อความของ Laura และถูกส่งกลับไปในประวัติแชต
+จึงพูดต่อได้ เช่น "ส่งการ์ดนี้ให้ research ต่อ"
+
+> ในเซสชัน Claude Code ของ repo นี้ ไฟล์ `CLAUDE.md` ทำให้ Claude รับบท Laura
+> และใช้ทีม agent จากปลั๊กอิน `personal-assistant-team` ด้วย
+
 ## เริ่มต้นใช้งาน
 
 ```bash
@@ -20,7 +39,9 @@ python run.py
 ```
 app/
   __init__.py      # create_app() – application factory
-  ai.py            # เรียก Claude API
+  ai.py            # Laura: system prompt + วงจรส่งงานให้ agent
+  agents.py        # agent idea และ research
+  ai_client.py     # Claude client, ชื่อรุ่น, การจัดการ error
   routes.py        # หน้าเว็บและ API
   templates/       # Jinja2 templates
   static/          # CSS / JS
@@ -34,7 +55,13 @@ run.py             # จุดเริ่มรันเซิร์ฟเว�
 |--------|---------------|-----------------------------------|
 | GET    | `/`           | หน้าแรก                            |
 | GET    | `/api/health` | ตรวจสถานะเซิร์ฟเวอร์ และบอกว่าตั้ง API key แล้วหรือยัง |
-| POST   | `/api/chat`   | รับ `{"message": "...", "history": [...]}` แล้วตอบ `{"reply": "..."}` จาก Claude |
+| POST   | `/api/chat`   | รับ `{"message": "...", "history": [...]}` ตอบ `{"reply": "...", "handoffs": [{"agent", "label", "output"}]}` |
+
+## ค่าใช้จ่าย
+
+ข้อความที่ Laura ตอบเองเรียก Claude 1 ครั้ง ถ้าส่งให้ agent จะเรียก 3 ครั้งขึ้นไป
+research แพงที่สุดเพราะค้นเว็บหลายรอบและคิดลึก (effort `high`)
+ปรับระดับได้ใน `app/agents.py`
 
 ## ทดสอบ
 
