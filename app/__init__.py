@@ -12,6 +12,7 @@ def create_app(test_config=None):
     app.config.from_mapping(
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev"),
         APP_NAME="Laura AI Hub",
+        APP_PASSWORD=os.environ.get("APP_PASSWORD", ""),
     )
     if test_config:
         app.config.update(test_config)

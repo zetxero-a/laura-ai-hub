@@ -9,7 +9,7 @@ from app import ai, ai_client, create_app
 
 @pytest.fixture
 def client():
-    return create_app({"TESTING": True}).test_client()
+    return create_app({"TESTING": True, "APP_PASSWORD": ""}).test_client()
 
 
 def text_response(text, stop_reason="end_turn"):
@@ -47,6 +47,7 @@ def fake_claude(monkeypatch):
         messages = FakeMessages(responses, error)
         fake = SimpleNamespace(beta=SimpleNamespace(messages=messages))
         monkeypatch.setattr(ai_client, "get_client", lambda: fake)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
         return messages
 
     return install
@@ -199,3 +200,67 @@ def test_loop_stops_after_max_turns(client, fake_claude, monkeypatch):
     data = client.post("/api/chat", json={"message": "x"}).get_json()
     assert "หลายขั้นตอน" in data["reply"]
     assert len(data["handoffs"]) == ai.MAX_TURNS
+
+
+def test_chat_without_api_key_returns_json_error(client, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    res = client.post("/api/chat", json={"message": "x"})
+    assert res.status_code == 503
+    assert "ANTHROPIC_API_KEY" in res.get_json()["error"]
+
+
+def test_unexpected_error_returns_json(client, fake_claude, monkeypatch):
+    fake_claude()
+
+    def boom(messages):
+        raise RuntimeError("bug")
+
+    monkeypatch.setattr(ai, "chat", boom)
+    res = client.post("/api/chat", json={"message": "x"})
+    assert res.status_code == 500
+    assert "error" in res.get_json()
+
+
+def test_unknown_route_is_still_404(client):
+    assert client.get("/nope").status_code == 404
+
+
+@pytest.mark.parametrize("stop_reason", ["max_tokens", "pause_turn"])
+def test_truncated_agent_output_is_flagged(fake_claude, stop_reason):
+    fake_claude(text_response("# 🔎 ครึ่งเดียว", stop_reason))
+    output = ai.agents.run_agent("research", "x")
+    assert output.startswith("# 🔎 ครึ่งเดียว")
+    assert "ไม่ครบ" in output
+
+
+def test_complete_agent_output_is_not_flagged(fake_claude):
+    fake_claude(text_response("# 💡 ครบ"))
+    assert ai.agents.run_agent("idea", "x") == "# 💡 ครบ"
+
+
+@pytest.fixture
+def locked_client():
+    return create_app({"TESTING": True, "APP_PASSWORD": "s3cret"}).test_client()
+
+
+def test_password_required_when_set(locked_client):
+    res = locked_client.get("/")
+    assert res.status_code == 401
+    assert "Basic" in res.headers["WWW-Authenticate"]
+    assert locked_client.post("/api/chat", json={"message": "x"}).status_code == 401
+
+
+def test_wrong_password_rejected(locked_client):
+    res = locked_client.get("/", auth=("lik", "wrong"))
+    assert res.status_code == 401
+
+
+def test_correct_password_allowed(locked_client, fake_claude):
+    fake_claude(text="สวัสดีค่ะ")
+    assert locked_client.get("/", auth=("lik", "s3cret")).status_code == 200
+    res = locked_client.post("/api/chat", json={"message": "x"}, auth=("", "s3cret"))
+    assert res.get_json()["reply"] == "สวัสดีค่ะ"
+
+
+def test_health_stays_open_with_password(locked_client):
+    assert locked_client.get("/api/health").status_code == 200
