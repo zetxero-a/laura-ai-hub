@@ -1,7 +1,10 @@
 """Laura AI Hub - Flask application factory."""
 import os
 
+from dotenv import load_dotenv
 from flask import Flask
+
+load_dotenv()  # read ANTHROPIC_API_KEY etc. from .env if present
 
 
 def create_app(test_config=None):

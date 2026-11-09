@@ -56,3 +56,33 @@ button {
   cursor: pointer;
 }
 .reply { min-height: 1.5em; margin-bottom: 0; }
+button:disabled { opacity: .6; cursor: wait; }
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+.chat-log:empty { display: none; }
+.bubble {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.bubble.user { align-self: flex-end; background: var(--accent); color: #fff; }
+.bubble.assistant { align-self: flex-start; background: var(--bg); border: 1px solid var(--border); }
+.bubble.pending { color: var(--muted); font-style: italic; }
+.bubble.error { align-self: flex-start; background: #fdecec; color: #a12626; }
+.link {
+  margin-top: 10px;
+  padding: 0;
+  background: none;
+  color: var(--muted);
+  font-size: .9rem;
+  text-decoration: underline;
+}

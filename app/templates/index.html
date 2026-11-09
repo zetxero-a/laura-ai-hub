@@ -2,39 +2,83 @@
 {% block content %}
 <section class="hero">
   <h1>ยินดีต้อนรับสู่ {{ config.APP_NAME }}</h1>
-  <p>แอป Flask ตั้งต้น พร้อมต่อยอด</p>
+  <p>คุยกับ Laura ผู้ช่วย AI ที่ขับเคลื่อนด้วย Claude</p>
   <p class="status">สถานะเซิร์ฟเวอร์: <span id="status">กำลังตรวจสอบ…</span></p>
 </section>
 
 <section class="card">
-  <h2>ทดลองส่งข้อความ</h2>
+  <h2>แชตกับ Laura</h2>
+  <div id="chat-log" class="chat-log" aria-live="polite"></div>
   <form id="chat-form">
     <input id="message" name="message" placeholder="พิมพ์ข้อความ…" autocomplete="off">
-    <button type="submit">ส่ง</button>
+    <button type="submit" id="send">ส่ง</button>
   </form>
-  <p id="reply" class="reply"></p>
+  <button type="button" id="clear" class="link">เริ่มบทสนทนาใหม่</button>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script>
+  const statusEl = document.getElementById("status");
   fetch("/api/health")
     .then(r => r.json())
-    .then(d => { document.getElementById("status").textContent = d.status === "ok" ? "ออนไลน์ ✅" : "มีปัญหา"; })
-    .catch(() => { document.getElementById("status").textContent = "ออฟไลน์ ❌"; });
+    .then(d => {
+      if (d.status !== "ok") statusEl.textContent = "มีปัญหา";
+      else statusEl.textContent = d.ai_configured ? "ออนไลน์ ✅" : "ออนไลน์ ⚠️ ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY";
+    })
+    .catch(() => { statusEl.textContent = "ออฟไลน์ ❌"; });
 
-  document.getElementById("chat-form").addEventListener("submit", async (e) => {
+  const log = document.getElementById("chat-log");
+  const form = document.getElementById("chat-form");
+  const input = document.getElementById("message");
+  const sendBtn = document.getElementById("send");
+  let history = [];
+
+  function addBubble(role, text) {
+    const div = document.createElement("div");
+    div.className = "bubble " + role;
+    div.textContent = text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+    return div;
+  }
+
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const input = document.getElementById("message");
-    const out = document.getElementById("reply");
-    const res = await fetch("/api/echo", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: input.value }),
-    });
-    const data = await res.json();
-    out.textContent = data.reply || data.error;
-    if (res.ok) input.value = "";
+    const message = input.value.trim();
+    if (!message) return;
+    addBubble("user", message);
+    input.value = "";
+    sendBtn.disabled = true;
+    const pending = addBubble("assistant pending", "กำลังคิด…");
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, history }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        pending.className = "bubble assistant";
+        pending.textContent = data.reply;
+        history.push({ role: "user", content: message }, { role: "assistant", content: data.reply });
+      } else {
+        pending.className = "bubble error";
+        pending.textContent = data.error || "เกิดข้อผิดพลาด";
+      }
+    } catch {
+      pending.className = "bubble error";
+      pending.textContent = "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้";
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  });
+
+  document.getElementById("clear").addEventListener("click", () => {
+    history = [];
+    log.innerHTML = "";
+    input.focus();
   });
 </script>
 {% endblock %}
