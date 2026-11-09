@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>ยินดีต้อนรับสู่ {{ config.APP_NAME }}</h1>
+  <p>แอป Flask ตั้งต้น พร้อมต่อยอด</p>
+  <p class="status">สถานะเซิร์ฟเวอร์: <span id="status">กำลังตรวจสอบ…</span></p>
+</section>
+
+<section class="card">
+  <h2>ทดลองส่งข้อความ</h2>
+  <form id="chat-form">
+    <input id="message" name="message" placeholder="พิมพ์ข้อความ…" autocomplete="off">
+    <button type="submit">ส่ง</button>
+  </form>
+  <p id="reply" class="reply"></p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  fetch("/api/health")
+    .then(r => r.json())
+    .then(d => { document.getElementById("status").textContent = d.status === "ok" ? "ออนไลน์ ✅" : "มีปัญหา"; })
+    .catch(() => { document.getElementById("status").textContent = "ออฟไลน์ ❌"; });
+
+  document.getElementById("chat-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("message");
+    const out = document.getElementById("reply");
+    const res = await fetch("/api/echo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: input.value }),
+    });
+    const data = await res.json();
+    out.textContent = data.reply || data.error;
+    if (res.ok) input.value = "";
+  });
+</script>
+{% endblock %}
